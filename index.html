@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <title>Legislações Unimontes</title>
+</head>
+
+<body>
+    <header>
+        <div class="logo-container">
+            <img src="logo.uni.png" alt="Logo da Unimontes">
+        </div>
+        <div class="login-container">
+            <button id="btnLogin" class="botao-login" onclick="mostrarLogin()">
+                <i class="fas fa-user"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Modal de Login -->
+    <div id="modalLogin" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" onclick="fecharModal()">&times;</span>
+            <h2>Login</h2>
+            <form id="formLogin" onsubmit="fazerLogin(event)">
+                <div class="form-group">
+                    <label for="usuario">Usuário</label>
+                    <input type="text" id="usuario" name="usuario" required>
+                </div>
+                <div class="form-group">
+                    <label for="senha">Senha</label>
+                    <input type="password" id="senha" name="senha" required>
+                </div>
+                <div class="button-group">
+                    <button type="submit" class="botao-padrao">Entrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <!-- Seta de voltar (inicialmente oculta) -->
+        <div id="btnVoltarContainer" style="display: none;">
+            <button id="btnVoltar" class="botao-seta-voltar" onclick="voltar()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+        </div>
+        <!-- Tela Inicial -->
+        <div id="telaInicial" class="tela-inicial">
+            <h1 class="titulo-inicial">Portarias e Resoluções<br> <span style="font-size: 2rem;">UNIMONTES</span></h1>
+            <div class="button-container">
+                <button class="botao-padrao" onclick="openPesquisa()">
+                    <i class="fas fa-search"></i> Pesquisar
+                </button>
+                <div id="adminButtons" style="display:none;">
+                    <button class="botao-padrao" onclick="mostrarOpcoesCadastro()">
+                        <i class="fas fa-plus-circle"></i> Cadastrar
+                    </button>
+                </div>
+            </div>
+
+            <div id="opcoesCadastro" class="button-container" style="display: none;">
+                <button class="botao-padrao" onclick="openTab(event, 'cadastroResolucao')">
+                    <i class="fas fa-file-alt"></i> Resolução
+                </button>
+                <button class="botao-padrao" onclick="openTab(event, 'cadastroPortaria')">
+                    <i class="fas fa-file-signature"></i> Portaria
+                </button>
+            </div>
+        </div>
+
+       
+        <!-- Cadastro de Resolução -->
+
+        
+        <div id="cadastroResolucao" class="tabcontent" style="display:none;">
+            <div class="cadastro-content">
+                <div class="cadastro-header">
+                    <h2><i class="fas fa-file-alt"></i> Cadastro de Resolução</h2>
+                </div>
+                
+                <form id="formCadastro" onsubmit="submitForm(event)" enctype="multipart/form-data">
+                    <div class="cadastro-grid">
+                        <div class="cadastro-group">
+                            <label for="numero">Número da Resolução</label>
+                            <input type="text" id="numero" name="numero" required>
+                        </div>
+                        
+                        <div class="cadastro-group">
+                            <label for="tipo">Tipo de Resolução</label>
+                            <select id="tipo" name="tipo" required>
+                                <option value="">-</option>
+                                <option value="CEPEX">CEPEX</option>
+                                <option value="CONSU">CONSU</option>
+                            </select>
+                        </div>
+                        
+                        <div class="cadastro-group">
+                            <label for="ano">Ano</label>
+                            <input type="text" id="ano" name="ano" required>
+                        </div>
+                        
+                        <div class="cadastro-group">
+                            <label for="data">Data</label>
+                            <input type="date" id="data" name="data" required>
+                        </div>
+                        
+                        <div class="cadastro-group cadastro-full-width">
+                            <label for="assunto">Assunto</label>
+                            <textarea id="assunto" name="assunto" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Seção de Status com Toggles -->
+                    <div class="status-section">   
+                        <div class="status-toggle-container">
+                            <span class="status-toggle-label">Status</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="statusToggle" name="status" value="Vigente" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-value" id="statusValue">Vigente</span>
+                            <input type="hidden" id="statusHidden" name="status" value="Vigente">
+                        </div>
+                        
+                        <div class="status-toggle-container">
+                            <span class="status-toggle-label">Possui Vínculo?</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="vinculoToggle" name="vinculo" value="Sim">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-value" id="vinculoValue">Não</span>
+                            <input type="hidden" id="vinculoHidden" name="vinculo" value="Não">
+                        </div>
+                        
+                        <div class="cadastro-group" id="campoVinculo" style="display:none; margin-top:15px;">
+                            <label for="vinculo_resolucao">Resolução Vinculada</label>
+                            <input type="text" id="vinculo_resolucao" name="vinculo_resolucao">
+                        </div>
+                    </div>
+                    
+                    <!-- Upload de Arquivo -->
+                    <div class="file-upload-container">
+                        <label class="custom-file-upload">
+                            <i class="fas fa-cloud-upload-alt"></i> Selecionar Arquivo PDF
+                            <input type="file" id="pdf" name="pdf" accept="application/pdf" required style="display:none;">
+                        </label>
+                        <div id="file-name">Nenhum arquivo selecionado</div>
+                        <small class="file-hint">(Tamanho máximo: 5MB)</small>
+                    </div>
+                    
+                    <!-- Botões -->
+                    <div class="form-button-group">
+                        <button type="button" class="form-button form-button-secondary" onclick="limparFormulario()">
+                            <i class="fas fa-broom"></i> Limpar
+                        </button>
+                        <button type="submit" class="form-button form-button-primary">
+                            <i class="fas fa-save"></i> Cadastrar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Cadastro de Portaria -->
+        <div id="cadastroPortaria" class="tabcontent" style="display:none;">
+            <form id="formCadastroPortaria" onsubmit="submitFormPortaria(event)" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="numeroPortaria">Número da Portaria</label>
+                    <input type="text" id="numeroPortaria" name="numeroPortaria" required>
+                </div>
+                <div class="form-group">
+                    <label for="anoPortaria">Ano</label>
+                    <input type="text" id="anoPortaria" name="anoPortaria" required>
+                </div>
+                <div class="form-group">
+                    <label for="assuntoPortaria">Assunto</label>
+                    <textarea id="assuntoPortaria" name="assuntoPortaria" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="dataPortaria">Data</label>
+                    <input type="date" id="dataPortaria" name="dataPortaria" required>
+                </div>
+                <div class="toggle-container">
+                    <span class="toggle-label">Status</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="statusPortariaToggle" name="statusPortaria" value="Vigente">
+                        <span class="toggle-slider">
+                            <i class="fas fa-check toggle-icon on"></i>
+                            <i class="fas fa-times toggle-icon off"></i>
+                        </span>
+                    </label>
+                    <span class="toggle-value" id="statusPortariaValue">Vigente</span>
+                    <input type="hidden" id="statusPortariaHidden" name="statusPortaria" value="Vigente">
+                </div>
+                <div class="form-group">
+                    <label for="arquivoPDFPortaria">Arquivo</label>
+                    <input type="file" id="pdfPortaria" name="pdfPortaria" accept="application/pdf">
+                    <span id="file-name-portaria">Nenhum arquivo selecionado</span>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" class="botao-padrao btn-limpar" onclick="limparFormularioPortaria()">
+                        <i class="fas fa-broom"></i> Limpar
+                    </button>
+                    <button type="submit" class="botao-padrao">
+                        <i class="fas fa-save"></i> Cadastrar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tela de Pesquisa -->
+        <div id="pesquisa" class="tabcontent" style="display:none;">
+            <div class="pesquisa-container">
+                <h2>Pesquisar por:</h2>
+                <div class="button-container">
+                    <button class="botao-padrao" onclick="openPesquisaResolucao()">
+                        <i class="fas fa-file-alt"></i> Resolução
+                    </button>
+                    <button class="botao-padrao" onclick="openPesquisaPortaria()">
+                        <i class="fas fa-file-signature"></i> Portaria
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pesquisa de Resolução -->
+        <div id="pesquisaResolucao" class="tabcontent" style="display:none;">
+            <form id="formPesquisaResolucao" class="pesquisa-form" onsubmit="pesquisarResolucoes(event)">
+                <div class="form-group">
+                    <label for="numeroPesquisa">Número</label>
+                    <input type="text" id="numeroPesquisa" name="numeroPesquisa">
+                </div>
+                
+                <div class="form-group">
+                    <label for="tipoPesquisa">Tipo</label>
+                    <select id="tipoPesquisa" name="tipoPesquisa">
+                        <option value="">Todos</option>
+                        <option value="CEPEX">CEPEX</option>
+                        <option value="CONSU">CONSU</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="anoPesquisa">Ano</label>
+                    <input type="text" id="anoPesquisa" name="anoPesquisa">
+                </div>
+                
+                <div class="pesquisa-toggle-container">
+                    <span class="pesquisa-toggle-label">Status</span>
+                    <label class="pesquisa-toggle-switch">
+                        <input type="checkbox" id="statusPesquisaToggle" name="statusPesquisa" value="Vigente">
+                        <span class="pesquisa-toggle-slider"></span>
+                    </label>
+                    <span class="pesquisa-toggle-value" id="statusPesquisaValue">Vigente</span>
+                    <input type="hidden" id="statusPesquisaHidden" name="statusPesquisa" value="Vigente">
+                </div>
+                
+                <div class="form-group full-width">
+                    <label for="assuntoPesquisa">Assunto</label>
+                    <input type="text" id="assuntoPesquisa" name="assuntoPesquisa" >
+                </div>
+        
+                <div class="button-group">
+                    <button type="submit" class="botao-padrao botao-pesquisar">
+                        <i class="fas fa-search"></i> Pesquisar
+                    </button>
+                </div>
+            </form>
+
+            <div id="resultadosPesquisaResolucao" style="display: none;">
+                <table id="tabelaResultadosResolucao">
+                    <thead>
+                        <tr>
+                            <th id="ordenarNumeroRes" style="cursor: pointer;">Número <i class="fa fa-sort"></i></th>
+                            <th id="ordenarTipoRes" style="cursor: pointer;">Tipo <i class="fa fa-sort"></i></th>
+                            <th id="ordenarAnoRes" style="cursor: pointer;">Ano <i class="fa fa-sort"></i></th>
+                            <th>Assunto</th>
+                            <th id="ordenarDataRes" style="cursor: pointer;">Data <i class="fa fa-sort"></i></th>
+                            <th>Status</th>
+                            <th>Vínculo</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pesquisa de Portaria -->
+        <div id="pesquisaPortaria" class="tabcontent" style="display:none;">
+            <form id="formPesquisaPortaria" class="pesquisa-form" onsubmit="pesquisarPortarias(event)">
+                <div class="form-group">
+                    <label for="numeroPesquisaPort">Número</label>
+                    <input type="text" id="numeroPesquisaPort" name="numeroPesquisaPort" >
+                </div>
+                
+                <div class="form-group">
+                    <label for="anoPesquisaPort">Ano</label>
+                    <input type="text" id="anoPesquisaPort" name="anoPesquisaPort" >
+                </div>
+                
+                <div class="pesquisa-toggle-container">
+                    <span class="pesquisa-toggle-label">Status</span>
+                    <label class="pesquisa-toggle-switch">
+                        <input type="checkbox" id="statusPortariaPesquisaToggle" name="statusPortariaPesquisa" value="Vigente" checked>
+                        <span class="pesquisa-toggle-slider"></span>
+                    </label>
+                    <span class="pesquisa-toggle-value" id="statusPortariaPesquisaValue">Vigente</span>
+                    <input type="hidden" id="statusPortariaPesquisaHidden" name="statusPortariaPesquisa" value="Vigente">
+                </div>
+                
+                <div class="form-group full-width">
+                    <label for="assuntoPesquisaPort">Assunto</label>
+                    <input type="text" id="assuntoPesquisaPort" name="assuntoPesquisaPort" >
+                </div>
+        
+                <div class="button-group">
+                    <button type="submit" class="botao-padrao botao-pesquisar">
+                        <i class="fas fa-search"></i> Pesquisar
+                    </button>
+                </div>
+            </form>
+
+            <div id="resultadosPesquisaPortaria" style="display: none;">
+                <table id="tabelaResultadosPortaria">
+                    <thead>
+                        <tr>
+                            <th id="ordenarNumeroPort" style="cursor: pointer;">Número <i class="fa fa-sort"></i></th>
+                            <th id="ordenarAnoPort" style="cursor: pointer;">Ano <i class="fa fa-sort"></i></th>
+                            <th>Assunto</th>
+                            <th id="ordenarDataPort" style="cursor: pointer;">Data <i class="fa fa-sort"></i></th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Resultados serão inseridos aqui via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 UNIMONTES - CONTROLADORIA SECCIONAL</p>
+    </footer>
+    <script src="script.js"></script>
+</body>
+
+</html>
