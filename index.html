@@ -168,50 +168,64 @@
         
         <!-- Cadastro de Portaria -->
         <div id="cadastroPortaria" class="tabcontent" style="display:none;">
-            <form id="formCadastroPortaria" onsubmit="submitFormPortaria(event)" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label for="numeroPortaria">Número da Portaria</label>
-                    <input type="text" id="numeroPortaria" name="numeroPortaria" required>
+            <div class="form-container">
+                <div class="form-header">
+                    <h2><i class="fas fa-file-signature"></i> Cadastro de Portaria</h2>
                 </div>
-                <div class="form-group">
-                    <label for="anoPortaria">Ano</label>
-                    <input type="text" id="anoPortaria" name="anoPortaria" required>
-                </div>
-                <div class="form-group">
-                    <label for="assuntoPortaria">Assunto</label>
-                    <textarea id="assuntoPortaria" name="assuntoPortaria" rows="3" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="dataPortaria">Data</label>
-                    <input type="date" id="dataPortaria" name="dataPortaria" required>
-                </div>
-                <div class="toggle-container">
-                    <span class="toggle-label">Status</span>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="statusPortariaToggle" name="statusPortaria" value="Vigente">
-                        <span class="toggle-slider">
-                            <i class="fas fa-check toggle-icon on"></i>
-                            <i class="fas fa-times toggle-icon off"></i>
-                        </span>
-                    </label>
-                    <span class="toggle-value" id="statusPortariaValue">Vigente</span>
-                    <input type="hidden" id="statusPortariaHidden" name="statusPortaria" value="Vigente">
-                </div>
-                <div class="form-group">
-                    <label for="arquivoPDFPortaria">Arquivo</label>
-                    <input type="file" id="pdfPortaria" name="pdfPortaria" accept="application/pdf">
-                    <span id="file-name-portaria">Nenhum arquivo selecionado</span>
-                </div>
-
-                <div class="button-group">
-                    <button type="button" class="botao-padrao btn-limpar" onclick="limparFormularioPortaria()">
-                        <i class="fas fa-broom"></i> Limpar
-                    </button>
-                    <button type="submit" class="botao-padrao">
-                        <i class="fas fa-save"></i> Cadastrar
-                    </button>
-                </div>
-            </form>
+                <form id="formCadastroPortaria" onsubmit="submitFormPortaria(event)" enctype="multipart/form-data">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="numeroPortaria">Número da Portaria</label>
+                            <input type="text" id="numeroPortaria" name="numeroPortaria" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="anoPortaria">Ano</label>
+                            <input type="text" id="anoPortaria" name="anoPortaria" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="dataPortaria">Data</label>
+                            <input type="date" id="dataPortaria" name="dataPortaria" required>
+                        </div>
+                        
+                        <div class="form-group form-full-width">
+                            <label for="assuntoPortaria">Assunto</label>
+                            <textarea id="assuntoPortaria" name="assuntoPortaria" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="toggle-section">   
+                        <div class="toggle-container">
+                            <span class="toggle-label">Status</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="statusPortariaToggle" name="statusPortaria" value="Vigente" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-value" id="statusPortariaValue">Vigente</span>
+                            <input type="hidden" id="statusPortariaHidden" name="statusPortaria" value="Vigente">
+                        </div>
+                    </div>
+                    
+                    <div class="file-upload-container">
+                        <label class="custom-file-upload">
+                            <i class="fas fa-cloud-upload-alt"></i> Selecionar Arquivo PDF
+                            <input type="file" id="pdfPortaria" name="pdfPortaria" accept="application/pdf" required style="display:none;">
+                        </label>
+                        <div class="file-name" id="file-name-portaria">Nenhum arquivo selecionado</div>
+                        <small class="file-hint">(Tamanho máximo: 5MB)</small>
+                    </div>
+                    
+                    <div class="form-button-group">
+                        <button type="button" class="form-button form-button-secondary" onclick="limparFormularioPortaria()">
+                            <i class="fas fa-broom"></i> Limpar
+                        </button>
+                        <button type="submit" class="form-button form-button-primary">
+                            <i class="fas fa-save"></i> Cadastrar
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <!-- Tela de Pesquisa -->
@@ -231,49 +245,56 @@
 
         <!-- Pesquisa de Resolução -->
         <div id="pesquisaResolucao" class="tabcontent" style="display:none;">
-            <form id="formPesquisaResolucao" class="pesquisa-form" onsubmit="pesquisarResolucoes(event)">
-                <div class="form-group">
-                    <label for="numeroPesquisa">Número</label>
-                    <input type="text" id="numeroPesquisa" name="numeroPesquisa">
+            <div class="pesquisa-form">
+                <div class="form-header">
+                    <h2><i class="fas fa-file-alt"></i> Pesquisa de Resolução</h2>
                 </div>
-                
-                <div class="form-group">
-                    <label for="tipoPesquisa">Tipo</label>
-                    <select id="tipoPesquisa" name="tipoPesquisa">
-                        <option value="">Todos</option>
-                        <option value="CEPEX">CEPEX</option>
-                        <option value="CONSU">CONSU</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="anoPesquisa">Ano</label>
-                    <input type="text" id="anoPesquisa" name="anoPesquisa">
-                </div>
-                
-                <div class="pesquisa-toggle-container">
-                    <span class="pesquisa-toggle-label">Status</span>
-                    <label class="pesquisa-toggle-switch">
-                        <input type="checkbox" id="statusPesquisaToggle" name="statusPesquisa" value="Vigente">
-                        <span class="pesquisa-toggle-slider"></span>
-                    </label>
-                    <span class="pesquisa-toggle-value" id="statusPesquisaValue">Vigente</span>
-                    <input type="hidden" id="statusPesquisaHidden" name="statusPesquisa" value="Vigente">
-                </div>
-                
-                <div class="form-group full-width">
-                    <label for="assuntoPesquisa">Assunto</label>
-                    <input type="text" id="assuntoPesquisa" name="assuntoPesquisa" >
-                </div>
+                <form id="formPesquisaResolucao" onsubmit="pesquisarResolucoes(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="numeroPesquisa">Número</label>
+                            <input type="text" id="numeroPesquisa" name="numeroPesquisa">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="tipoPesquisa">Tipo</label>
+                            <select id="tipoPesquisa" name="tipoPesquisa">
+                                <option value="">Todos</option>
+                                <option value="CEPEX">CEPEX</option>
+                                <option value="CONSU">CONSU</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="anoPesquisa">Ano</label>
+                            <input type="text" id="anoPesquisa" name="anoPesquisa">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="assuntoPesquisa">Assunto</label>
+                            <input type="text" id="assuntoPesquisa" name="assuntoPesquisa">
+                        </div>
+                        
+                        <div class="toggle-container form-full-width">
+                            <span class="toggle-label">Status</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="statusPesquisaToggle" name="statusPesquisa" value="Vigente" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-value" id="statusPesquisaValue">Vigente</span>
+                            <input type="hidden" id="statusPesquisaHidden" name="statusPesquisa" value="Vigente">
+                        </div>
+                    </div>
+                    
+                    <div class="form-button-group">
+                        <button type="submit" class="form-button form-button-primary">
+                            <i class="fas fa-search"></i> Pesquisar
+                        </button>
+                    </div>
+                </form>
+            </div>
         
-                <div class="button-group">
-                    <button type="submit" class="botao-padrao botao-pesquisar">
-                        <i class="fas fa-search"></i> Pesquisar
-                    </button>
-                </div>
-            </form>
-
-            <div id="resultadosPesquisaResolucao" style="display: none;">
+            <div id="resultadosPesquisaResolucao" class="resultados-container" style="display: none;">
                 <table id="tabelaResultadosResolucao">
                     <thead>
                         <tr>
@@ -296,40 +317,47 @@
 
         <!-- Pesquisa de Portaria -->
         <div id="pesquisaPortaria" class="tabcontent" style="display:none;">
-            <form id="formPesquisaPortaria" class="pesquisa-form" onsubmit="pesquisarPortarias(event)">
-                <div class="form-group">
-                    <label for="numeroPesquisaPort">Número</label>
-                    <input type="text" id="numeroPesquisaPort" name="numeroPesquisaPort" >
+            <div class="pesquisa-form">
+                <div class="form-header">
+                    <h2><i class="fas fa-file-signature"></i> Pesquisa de Portaria</h2>
                 </div>
-                
-                <div class="form-group">
-                    <label for="anoPesquisaPort">Ano</label>
-                    <input type="text" id="anoPesquisaPort" name="anoPesquisaPort" >
-                </div>
-                
-                <div class="pesquisa-toggle-container">
-                    <span class="pesquisa-toggle-label">Status</span>
-                    <label class="pesquisa-toggle-switch">
-                        <input type="checkbox" id="statusPortariaPesquisaToggle" name="statusPortariaPesquisa" value="Vigente" checked>
-                        <span class="pesquisa-toggle-slider"></span>
-                    </label>
-                    <span class="pesquisa-toggle-value" id="statusPortariaPesquisaValue">Vigente</span>
-                    <input type="hidden" id="statusPortariaPesquisaHidden" name="statusPortariaPesquisa" value="Vigente">
-                </div>
-                
-                <div class="form-group full-width">
-                    <label for="assuntoPesquisaPort">Assunto</label>
-                    <input type="text" id="assuntoPesquisaPort" name="assuntoPesquisaPort" >
-                </div>
+                <form id="formPesquisaPortaria" onsubmit="pesquisarPortarias(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="numeroPesquisaPort">Número</label>
+                            <input type="text" id="numeroPesquisaPort" name="numeroPesquisaPort">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="anoPesquisaPort">Ano</label>
+                            <input type="text" id="anoPesquisaPort" name="anoPesquisaPort">
+                        </div>
+                        
+                        <div class="form-group form-full-width">
+                            <label for="assuntoPesquisaPort">Assunto</label>
+                            <input type="text" id="assuntoPesquisaPort" name="assuntoPesquisaPort">
+                        </div>
+                        
+                        <div class="toggle-container form-full-width">
+                            <span class="toggle-label">Status</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="statusPortariaPesquisaToggle" name="statusPortariaPesquisa" value="Vigente" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-value" id="statusPortariaPesquisaValue">Vigente</span>
+                            <input type="hidden" id="statusPortariaPesquisaHidden" name="statusPortariaPesquisa" value="Vigente">
+                        </div>
+                    </div>
+                    
+                    <div class="form-button-group">
+                        <button type="submit" class="form-button form-button-primary">
+                            <i class="fas fa-search"></i> Pesquisar
+                        </button>
+                    </div>
+                </form>
+            </div>
         
-                <div class="button-group">
-                    <button type="submit" class="botao-padrao botao-pesquisar">
-                        <i class="fas fa-search"></i> Pesquisar
-                    </button>
-                </div>
-            </form>
-
-            <div id="resultadosPesquisaPortaria" style="display: none;">
+            <div id="resultadosPesquisaPortaria" class="resultados-container" style="display: none;">
                 <table id="tabelaResultadosPortaria">
                     <thead>
                         <tr>
