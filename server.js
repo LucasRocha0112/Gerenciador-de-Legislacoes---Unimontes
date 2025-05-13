@@ -1,5 +1,5 @@
 const express = require("express");
-const mysql = require("mysql2");
+const mysql = require("mysql2/promise"); // Usando a versão com promises
 const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
@@ -12,269 +12,324 @@ const PORT = 3000;
 // Configurações
 const uploadDir = path.join(__dirname, "uploads");
 
+// Configuração CORS para desenvolvimento
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Admin-Token']
+}));
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(uploadDir));
 
 // Verificar ou criar a pasta 'uploads'
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+  fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configuração do multer
+// Configuração do multer para upload de arquivos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
+  }
 });
-const upload = multer({ storage });
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 } // Limite de 5MB
+});
 
-// Configurar conexão com o banco de dados
-const db = mysql.createConnection({
+// Configurar pool de conexões com o banco de dados
+const pool = mysql.createPool({
   host: "localhost",
   user: "root",
   password: "",
-  database: "sistema_unimontes"
-});
-
-// Verificar conexão com o banco
-db.connect((err) => {
-  if (err) {
-    console.error("Erro ao conectar ao banco de dados:", err);
-    return;
-  }
-  console.log("Conectado ao banco de dados sistema_unimontes");
+  database: "sistema_unimontes",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
 // Middleware de verificação de admin
-function verificarAdmin(req, res, next) {
-  const authToken = req.headers['admin-token'];
-
-  if (authToken === 'admin123') {
-    next();
-  } else {
-    console.log("Tentativa de acesso não autorizado. Token recebido:", authToken);
-    res.status(403).json({
-      success: false,
-      message: "Acesso negado - faça login como administrador"
-    });
+async function verificarAdmin(req, res, next) {
+  const authToken = req.headers['admin-token'] || req.headers['Admin-Token'];
+  
+  // Em desenvolvimento, aceita qualquer token ou o padrão 'admin123'
+  if (process.env.NODE_ENV === 'development' || authToken === 'admin123') {
+    return next();
   }
+  
+  console.log("Tentativa de acesso não autorizado. Token recebido:", authToken);
+  res.status(403).json({
+    success: false,
+    message: "Acesso negado - faça login como administrador"
+  });
 }
 
 // Rota de login
 app.post('/login', (req, res) => {
-  const { usuario, senha } = req.body;
+  try {
+    const { usuario, senha } = req.body;
 
-  if (usuario === "admin" && senha === "admin123") {
-    res.json({
-      success: true,
-      message: "Login bem-sucedido",
-      token: "admin123"
-    });
-  } else {
-    res.status(401).json({
+    if (usuario === "admin" && senha === "admin123") {
+      res.json({
+        success: true,
+        message: "Login bem-sucedido",
+        token: "admin123"
+      });
+    } else {
+      res.status(401).json({
+        success: false,
+        message: "Credenciais inválidas"
+      });
+    }
+  } catch (error) {
+    console.error("Erro no login:", error);
+    res.status(500).json({
       success: false,
-      message: "Credenciais inválidas"
+      message: "Erro interno no servidor"
     });
   }
 });
 
 // Rotas de cadastro protegidas
-app.post("/cadastrar-resolucao", verificarAdmin, upload.single("pdf"), (req, res) => {
-  const { numero, tipo, ano, assunto, data, status, vinculo, vinculo_resolucao } = req.body;
+app.post("/cadastrar-resolucao", verificarAdmin, upload.single("pdf"), async (req, res) => {
+  try {
+    // Extrai os dados do corpo da requisição (FormData)
+    const { numero, tipo, ano, assunto, data, status, vinculo, vinculo_resolucao } = req.body;
 
-  if (!numero || !tipo || !ano || !assunto || !data || !status || !vinculo) {
-    return res.status(400).json({ success: false, message: "Todos os campos obrigatórios devem ser preenchidos." });
-  }
-
-  const query = `
-    INSERT INTO resolucoes (numero, tipo, ano, assunto, data, status, vinculo, vinculo_resolucao, pdf)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-  const params = [
-    numero,
-    tipo,
-    ano,
-    assunto,
-    data,
-    status,
-    vinculo,
-    vinculo === "Sim" ? vinculo_resolucao : null,
-    req.file ? req.file.filename : null,
-  ];
-
-  db.query(query, params, (err, result) => {
-    if (err) {
-      console.error("Erro ao cadastrar resolução:", err.message);
-      return res.status(500).json({ success: false, message: "Erro ao cadastrar resolução." });
+    // Validação dos campos obrigatórios
+    if (!numero || !tipo || !ano || !assunto || !data || !status || !vinculo) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Todos os campos obrigatórios devem ser preenchidos." 
+      });
     }
+
+    const query = `
+      INSERT INTO resolucoes 
+        (numero, tipo, ano, assunto, data, status, vinculo, vinculo_resolucao, pdf)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    const params = [
+      numero,
+      tipo,
+      ano,
+      assunto,
+      data,
+      status,
+      vinculo,
+      vinculo === "Sim" ? vinculo_resolucao : null,
+      req.file ? req.file.filename : null
+    ];
+
+    const [result] = await pool.execute(query, params);
+    
     res.status(201).json({
       success: true,
       message: "Resolução cadastrada com sucesso.",
       id: result.insertId
     });
-  });
+  } catch (error) {
+    console.error("Erro no cadastro de resolução:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro interno no servidor",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 });
 
-app.post("/cadastrar-portaria", verificarAdmin, upload.single("pdfPortaria"), (req, res) => {
-  const { numeroPortaria, anoPortaria, assuntoPortaria, dataPortaria, statusPortaria } = req.body;
+app.post("/cadastrar-portaria", verificarAdmin, upload.single("pdfPortaria"), async (req, res) => {
+  try {
+    const { numeroPortaria, anoPortaria, assuntoPortaria, dataPortaria, statusPortaria } = req.body;
 
-  if (!numeroPortaria || !anoPortaria || !assuntoPortaria || !dataPortaria || !statusPortaria) {
-    return res.status(400).json({ success: false, message: "Todos os campos obrigatórios devem ser preenchidos." });
-  }
-
-  const query = `
-    INSERT INTO portarias (numero, ano, assunto, data, status, pdf)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
-  const params = [
-    numeroPortaria,
-    anoPortaria,
-    assuntoPortaria,
-    dataPortaria,
-    statusPortaria,
-    req.file ? req.file.filename : null,
-  ];
-
-  db.query(query, params, (err, result) => {
-    if (err) {
-      console.error("Erro ao cadastrar portaria:", err.message);
-      return res.status(500).json({ success: false, message: "Erro ao cadastrar portaria." });
+    if (!numeroPortaria || !anoPortaria || !assuntoPortaria || !dataPortaria || !statusPortaria) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Todos os campos obrigatórios devem ser preenchidos." 
+      });
     }
+
+    const query = `
+      INSERT INTO portarias (numero, ano, assunto, data, status, pdf)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+    const params = [
+      numeroPortaria,
+      anoPortaria,
+      assuntoPortaria,
+      dataPortaria,
+      statusPortaria,
+      req.file ? req.file.filename : null,
+    ];
+
+    const [result] = await pool.execute(query, params);
+    
     res.status(201).json({
       success: true,
       message: "Portaria cadastrada com sucesso.",
       id: result.insertId
     });
-  });
+  } catch (error) {
+    console.error("Erro no cadastro de portaria:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro interno no servidor",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 });
 
 // Rotas de consulta públicas
-app.get("/resolucoes", (req, res) => {
-  const { numero, ano, tipo, status, assunto } = req.query;
+app.get("/resolucoes", async (req, res) => {
+  try {
+    const { numero, ano, tipo, status, assunto } = req.query;
 
-  let query = `
-    SELECT id, numero, tipo, ano, assunto, data, status, vinculo, vinculo_resolucao, pdf
-    FROM resolucoes WHERE 1=1
-  `;
-  const params = [];
+    let query = `
+      SELECT id, numero, tipo, ano, assunto, data, status, vinculo, vinculo_resolucao, pdf
+      FROM resolucoes WHERE 1=1
+    `;
+    const params = [];
 
-  if (numero) query += " AND numero LIKE ?", params.push(`%${numero}%`);
-  if (ano) query += " AND ano = ?", params.push(ano);
-  if (tipo) query += " AND tipo = ?", params.push(tipo);
-  if (status) query += " AND status = ?", params.push(status);
-  if (assunto) query += " AND assunto LIKE ?", params.push(`%${assunto}%`);
+    if (numero) query += " AND numero LIKE ?", params.push(`%${numero}%`);
+    if (ano) query += " AND ano = ?", params.push(ano);
+    if (tipo) query += " AND tipo = ?", params.push(tipo);
+    if (status) query += " AND status = ?", params.push(status);
+    if (assunto) query += " AND assunto LIKE ?", params.push(`%${assunto}%`);
 
-  db.query(query, params, (err, results) => {
-    if (err) {
-      console.error("Erro ao pesquisar resoluções:", err);
-      return res.status(500).json({ success: false, message: "Erro ao pesquisar resoluções." });
-    }
+    const [results] = await pool.execute(query, params);
+    
     res.json({ success: true, data: results });
-  });
+  } catch (error) {
+    console.error("Erro ao pesquisar resoluções:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro interno no servidor"
+    });
+  }
 });
 
-app.get("/portarias", (req, res) => {
-  const { numero, ano, status, assunto } = req.query;
+app.get("/portarias", async (req, res) => {
+  try {
+    const { numero, ano, status, assunto } = req.query;
 
-  let query = `
-    SELECT id, numero, ano, assunto, data, status, pdf
-    FROM portarias WHERE 1=1
-  `;
-  const params = [];
+    let query = `
+      SELECT id, numero, ano, assunto, data, status, pdf
+      FROM portarias WHERE 1=1
+    `;
+    const params = [];
 
-  if (numero) query += " AND numero LIKE ?", params.push(`%${numero}%`);
-  if (ano) query += " AND ano = ?", params.push(ano);
-  if (status) query += " AND status = ?", params.push(status);
-  if (assunto) query += " AND assunto LIKE ?", params.push(`%${assunto}%`);
+    if (numero) query += " AND numero LIKE ?", params.push(`%${numero}%`);
+    if (ano) query += " AND ano = ?", params.push(ano);
+    if (status) query += " AND status = ?", params.push(status);
+    if (assunto) query += " AND assunto LIKE ?", params.push(`%${assunto}%`);
 
-  db.query(query, params, (err, results) => {
-    if (err) {
-      console.error("Erro ao pesquisar portarias:", err);
-      return res.status(500).json({ success: false, message: "Erro ao pesquisar portarias." });
-    }
+    const [results] = await pool.execute(query, params);
+    
     res.json({ success: true, data: results });
-  });
+  } catch (error) {
+    console.error("Erro ao pesquisar portarias:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro interno no servidor"
+    });
+  }
 });
 
 // Rotas de exclusão protegidas
-app.delete("/resolucoes/:id", verificarAdmin, (req, res) => {
-  const { id } = req.params;
+app.delete("/resolucoes/:id", verificarAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
 
-  db.query("SELECT pdf FROM resolucoes WHERE id = ?", [id], (err, results) => {
-    if (err) {
-      console.error("Erro ao buscar resolução:", err);
-      return res.status(500).json({ success: false, message: "Erro ao buscar resolução." });
-    }
-
+    const [results] = await pool.execute("SELECT pdf FROM resolucoes WHERE id = ?", [id]);
+    
     if (results.length === 0) {
       return res.status(404).json({ success: false, message: "Resolução não encontrada." });
     }
 
     const pdfPath = results[0].pdf ? path.join(uploadDir, results[0].pdf) : null;
 
-    db.query("DELETE FROM resolucoes WHERE id = ?", [id], (err, result) => {
-      if (err) {
-        console.error("Erro ao excluir resolução:", err);
-        return res.status(500).json({ success: false, message: "Erro ao excluir resolução." });
-      }
-
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ success: false, message: "Resolução não encontrada." });
-      }
-
-      if (pdfPath && fs.existsSync(pdfPath)) {
-        fs.unlink(pdfPath, (err) => {
-          if (err) console.error("Erro ao excluir arquivo PDF:", err);
-        });
-      }
-
-      res.json({ success: true, message: "Resolução excluída com sucesso." });
-    });
-  });
-});
-
-app.delete("/portarias/:id", verificarAdmin, (req, res) => {
-  const { id } = req.params;
-
-  db.query("SELECT pdf FROM portarias WHERE id = ?", [id], (err, results) => {
-    if (err) {
-      console.error("Erro ao buscar portaria:", err);
-      return res.status(500).json({ success: false, message: "Erro ao buscar portaria." });
+    const [result] = await pool.execute("DELETE FROM resolucoes WHERE id = ?", [id]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "Resolução não encontrada." });
     }
 
+    if (pdfPath && fs.existsSync(pdfPath)) {
+      fs.unlink(pdfPath, (err) => {
+        if (err) console.error("Erro ao excluir arquivo PDF:", err);
+      });
+    }
+
+    res.json({ success: true, message: "Resolução excluída com sucesso." });
+  } catch (error) {
+    console.error("Erro ao excluir resolução:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro interno no servidor"
+    });
+  }
+});
+
+app.delete("/portarias/:id", verificarAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [results] = await pool.execute("SELECT pdf FROM portarias WHERE id = ?", [id]);
+    
     if (results.length === 0) {
       return res.status(404).json({ success: false, message: "Portaria não encontrada." });
     }
 
     const pdfPath = results[0].pdf ? path.join(uploadDir, results[0].pdf) : null;
 
-    db.query("DELETE FROM portarias WHERE id = ?", [id], (err, result) => {
-      if (err) {
-        console.error("Erro ao excluir portaria:", err);
-        return res.status(500).json({ success: false, message: "Erro ao excluir portaria." });
-      }
+    const [result] = await pool.execute("DELETE FROM portarias WHERE id = ?", [id]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "Portaria não encontrada." });
+    }
 
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ success: false, message: "Portaria não encontrada." });
-      }
+    if (pdfPath && fs.existsSync(pdfPath)) {
+      fs.unlink(pdfPath, (err) => {
+        if (err) console.error("Erro ao excluir arquivo PDF:", err);
+      });
+    }
 
-      if (pdfPath && fs.existsSync(pdfPath)) {
-        fs.unlink(pdfPath, (err) => {
-          if (err) console.error("Erro ao excluir arquivo PDF:", err);
-        });
-      }
-
-      res.json({ success: true, message: "Portaria excluída com sucesso." });
+    res.json({ success: true, message: "Portaria excluída com sucesso." });
+  } catch (error) {
+    console.error("Erro ao excluir portaria:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erro interno no servidor"
     });
+  }
+});
+
+// Rota de teste
+app.get("/", (req, res) => {
+  res.json({
+    message: "API do Sistema de Legislações Unimontes",
+    status: "online",
+    timestamp: new Date()
   });
 });
 
-// Iniciar o servidor
+// Middleware de erro
+app.use((err, req, res, next) => {
+  console.error('Erro:', err.stack);
+  res.status(500).json({
+    success: false,
+    message: 'Erro interno no servidor',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
+  console.log(`Modo: ${process.env.NODE_ENV || 'development'}`);
 });
