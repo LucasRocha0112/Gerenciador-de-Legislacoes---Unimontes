@@ -23,24 +23,24 @@
 
     <!-- Modal de Login -->
     <div id="modalLogin" class="modal" style="display:none;">
-        <div class="modal-content">
-            <span class="close" onclick="fecharModal()">&times;</span>
-            <h2>Login</h2>
-            <form id="formLogin" onsubmit="fazerLogin(event)">
-                <div class="form-group">
-                    <label for="usuario">Usuário</label>
-                    <input type="text" id="usuario" name="usuario" required>
-                </div>
-                <div class="form-group">
-                    <label for="senha">Senha</label>
-                    <input type="password" id="senha" name="senha" required>
-                </div>
-                <div class="button-group">
-                    <button type="submit" class="botao-padrao">Entrar</button>
-                </div>
-            </form>
-        </div>
-    </div>
+  <div class="modal-content">
+    <span class="close" onclick="fecharModal()">&times;</span>
+    <h2>Login</h2>
+    <form id="formLogin" onsubmit="fazerLogin(event)">
+      <div class="form-group">
+        <label for="usuario">Usuário</label>
+        <input type="text" id="usuario" name="usuario" required>
+      </div>
+      <div class="form-group">
+        <label for="senha">Senha</label>
+        <input type="password" id="senha" name="senha" required>
+      </div>
+      <div class="button-group">
+        <button type="submit" class="botao-padrao">Entrar</button>
+      </div>
+    </form>
+  </div>
+</div>
 
     <main class="main-content">
         <!-- Seta de voltar (inicialmente oculta) -->
@@ -116,32 +116,30 @@
                     </div>
                     
                     <!-- Seção de Status com Toggles -->
-                    <div class="status-section">   
                         <div class="status-toggle-container">
-                            <span class="status-toggle-label">Status</span>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="statusToggle" name="status" value="Vigente" checked>
-                                <span class="toggle-slider"></span>
-                            </label>
-                            <span class="toggle-value" id="statusValue">Vigente</span>
-                            <input type="hidden" id="statusHidden" name="status" value="Vigente">
-                        </div>
-                        
-                        <div class="status-toggle-container">
-                            <span class="status-toggle-label">Possui Vínculo?</span>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="vinculoToggle" name="vinculo" value="Sim">
-                                <span class="toggle-slider"></span>
-                            </label>
-                            <span class="toggle-value" id="vinculoValue">Não</span>
-                            <input type="hidden" id="vinculoHidden" name="vinculo" value="Não">
-                        </div>
-                        
-                        <div class="cadastro-group" id="campoVinculo" style="display:none; margin-top:15px;">
-                            <label for="vinculo_resolucao">Resolução Vinculada</label>
-                            <input type="text" id="vinculo_resolucao" name="vinculo_resolucao">
-                        </div>
+                             <span class="status-toggle-label">Status</span>
+                          <label class="toggle-switch">
+                          <input type="checkbox" id="statusToggle" checked>
+                               <span class="toggle-slider"></span>
+                          </label>
+                               <span class="toggle-value" id="statusValue">Vigente</span>
+                          <input type="hidden" id="statusHidden" name="status" value="Vigente">
                     </div>
+
+                        <div class="status-toggle-container">
+    <span class="status-toggle-label">Possui Vínculo?</span>
+    <label class="toggle-switch">
+        <input type="checkbox" id="vinculoToggle">
+        <span class="toggle-slider"></span>
+    </label>
+    <span class="toggle-value" id="vinculoValue">Não</span>
+    <input type="hidden" id="vinculoHidden" name="vinculo" value="Não">
+</div>
+    
+<div class="cadastro-group" id="campoVinculo" style="display:none; margin-top:15px;">
+    <label for="vinculo_resolucao">Resolução Vinculada</label>
+    <input type="text" id="vinculo_resolucao" name="vinculo_resolucao">
+</div>
                     
                     <!-- Upload de Arquivo -->
                     <div class="file-upload-container">
