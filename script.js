@@ -1,18 +1,20 @@
 const API_URL = "http://localhost:3000";
-
-
 let isAdminLoggedIn = false;
 
 // Função para obter headers de autenticação
-function getAuthHeaders() {
-  return {
-    'Admin-Token': localStorage.getItem('adminToken') || ''
+function getAuthHeaders(isFormData = false) {
+  const headers = {
+    'Admin-Token': localStorage.getItem('adminToken') || 'admin123'
   };
+  
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
+  
+  return headers;
 }
 
-
-
-// Funções de Login/Logout
+// ========== FUNÇÕES DE LOGIN/LOGOUT ==========
 function mostrarLogin() {
   document.getElementById('modalLogin').style.display = 'block';
 }
@@ -20,8 +22,6 @@ function mostrarLogin() {
 function fecharModal() {
   document.getElementById('modalLogin').style.display = 'none';
 }
-
-
 
 async function fazerLogin(event) {
   event.preventDefault();
@@ -37,25 +37,25 @@ async function fazerLogin(event) {
       body: JSON.stringify({ usuario, senha })
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      isAdminLoggedIn = true;
-      localStorage.setItem('adminToken', data.token);
-      document.getElementById('adminButtons').style.display = 'block';
-      document.getElementById('btnLogin').innerHTML = '<i class="fas fa-user"></i> Logout';
-      document.getElementById('btnLogin').onclick = logout;
-      fecharModal();
-    } else {
-      const error = await response.json();
-      alert(error.message || 'Erro no login');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Erro no login');
     }
+
+    const data = await response.json();
+    
+    isAdminLoggedIn = true;
+    localStorage.setItem('adminToken', data.token);
+    document.getElementById('adminButtons').style.display = 'block';
+    document.getElementById('btnLogin').innerHTML = '<i class="fas fa-user"></i> Logout';
+    document.getElementById('btnLogin').onclick = logout;
+    fecharModal();
+    
   } catch (error) {
     console.error('Erro:', error);
-    alert('Erro ao conectar com o servidor');
+    alert(error.message || 'Erro ao fazer login');
   }
 }
-
-
 
 function logout() {
   isAdminLoggedIn = false;
@@ -66,9 +66,7 @@ function logout() {
   voltarPaginaInicial();
 }
 
-
-
-// Navegação entre telas
+// ========== NAVEGAÇÃO ENTRE TELAS ==========
 function openTab(evt, tabName) {
   const tabcontent = document.getElementsByClassName("tabcontent");
   Array.from(tabcontent).forEach((tab) => (tab.style.display = "none"));
@@ -76,11 +74,10 @@ function openTab(evt, tabName) {
   document.getElementById(tabName).style.display = "block";
   if (evt) evt.currentTarget.classList.add("active");
   if (tabName !== 'telaInicial') {
-      document.getElementById('btnVoltarContainer').style.display = 'block';
+    document.getElementById('btnVoltarContainer').style.display = 'block';
   }
 }
 
-// Função principal para voltar
 function voltar() {
   const currentTab = document.querySelector('.tabcontent[style*="display: block"]') || 
                     document.querySelector('.tabcontent:not([style*="display: none"])');
@@ -88,28 +85,28 @@ function voltar() {
   if (!currentTab) return;
   
   if (currentTab.id === 'pesquisaResolucao' || currentTab.id === 'pesquisaPortaria') {
-      document.getElementById('pesquisa').style.display = 'block';
-      document.getElementById('pesquisaResolucao').style.display = 'none';
-      document.getElementById('pesquisaPortaria').style.display = 'none';
-      document.getElementById('resultadosPesquisaResolucao').style.display = 'none';
-      document.getElementById('resultadosPesquisaPortaria').style.display = 'none';
+    document.getElementById('pesquisa').style.display = 'block';
+    document.getElementById('pesquisaResolucao').style.display = 'none';
+    document.getElementById('pesquisaPortaria').style.display = 'none';
+    document.getElementById('resultadosPesquisaResolucao').style.display = 'none';
+    document.getElementById('resultadosPesquisaPortaria').style.display = 'none';
   } 
   else if (currentTab.id === 'pesquisa') {
-      voltarPaginaInicial();
+    voltarPaginaInicial();
   }
   else if (currentTab.id === 'cadastroResolucao' || currentTab.id === 'cadastroPortaria') {
-      if (document.getElementById('opcoesCadastro').style.display === 'flex') {
-          voltarPaginaInicial();
-      } else {
-          mostrarOpcoesCadastro();
-      }
+    if (document.getElementById('opcoesCadastro').style.display === 'flex') {
+      voltarPaginaInicial();
+    } else {
+      mostrarOpcoesCadastro();
+    }
   }
   else {
-
-      voltarPaginaInicial();
+    voltarPaginaInicial();
   }
+  
   if (document.getElementById('telaInicial').style.display === 'flex') {
-      document.getElementById('btnVoltarContainer').style.display = 'none';
+    document.getElementById('btnVoltarContainer').style.display = 'none';
   }
 }
 
@@ -122,8 +119,6 @@ function voltarPaginaInicial() {
   document.querySelector(".button-container").style.display = "flex";
 }
 
-
-
 function openPesquisa() {
   document.getElementById("telaInicial").style.display = "none";
   document.getElementById("pesquisa").style.display = "block";
@@ -131,9 +126,9 @@ function openPesquisa() {
 
   const tabcontent = document.getElementsByClassName("tabcontent");
   Array.from(tabcontent).forEach((tab) => {
-      if (tab.id !== "pesquisa") {
-          tab.style.display = "none";
-      }
+    if (tab.id !== "pesquisa") {
+      tab.style.display = "none";
+    }
   });
 }
 
@@ -153,73 +148,109 @@ function mostrarOpcoesCadastro() {
   document.getElementById('btnVoltarContainer').style.display = 'block';
 }
 
-
-
-// Funções de cadastro
+// ========== FUNÇÕES DE CADASTRO ==========
 async function submitForm(event) {
   event.preventDefault();
-  const formCadastro = document.getElementById("formCadastro");
-  const formData = new FormData(formCadastro);
+  
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.innerHTML;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
 
   try {
+    const formData = new FormData(event.target);
+    
+    // Adiciona os valores dos toggles ao FormData
+    formData.set('status', document.getElementById('statusHidden').value);
+    formData.set('vinculo', document.getElementById('vinculoHidden').value);
+    
+    // DEBUG: Mostrar conteúdo do FormData
+    for (let [key, value] of formData.entries()) {
+      console.log(key, value);
+    }
+    
     const response = await fetch(`${API_URL}/cadastrar-resolucao`, {
       method: "POST",
-      headers: getAuthHeaders(),
-      body: formData,
+      headers: getAuthHeaders(true),
+      body: formData
     });
 
-    if (response.ok) {
-      alert("Resolução cadastrada com sucesso!");
-      formCadastro.reset();
-      document.getElementById("file-name").textContent = "Nenhum arquivo selecionado";
-    } else {
-      const errorMessage = await response.text();
-      alert(`Erro ao cadastrar: ${errorMessage}`);
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || "Erro ao cadastrar resolução");
     }
+
+    alert("Resolução cadastrada com sucesso!");
+    event.target.reset();
+    document.getElementById("file-name").textContent = "Nenhum arquivo selecionado";
+    
+    // Reseta os toggles para os valores padrão
+    document.getElementById('statusToggle').checked = true;
+    document.getElementById('statusValue').textContent = 'Vigente';
+    document.getElementById('statusHidden').value = 'Vigente';
+    
+    document.getElementById('vinculoToggle').checked = false;
+    document.getElementById('vinculoValue').textContent = 'Não';
+    document.getElementById('vinculoHidden').value = 'Não';
+    document.getElementById('campoVinculo').style.display = 'none';
+    
   } catch (error) {
-    console.error("Erro no cadastro:", error.message);
-    alert("Erro ao se conectar ao servidor. Verifique a conexão.");
+    console.error("Erro no cadastro:", error);
+    alert(`Erro ao cadastrar: ${error.message}`);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalText;
   }
 }
-
-
 
 async function submitFormPortaria(event) {
   event.preventDefault();
-  const formCadastroPortaria = document.getElementById("formCadastroPortaria");
-  const formData = new FormData(formCadastroPortaria);
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
 
   try {
+    const formData = new FormData(event.target);
+    
     const response = await fetch(`${API_URL}/cadastrar-portaria`, {
       method: "POST",
-      headers: getAuthHeaders(),
-      body: formData,
+      headers: getAuthHeaders(true),
+      body: formData
     });
 
-    if (response.ok) {
-      alert("Portaria cadastrada com sucesso!");
-      formCadastroPortaria.reset();
-      document.getElementById("file-name-portaria").textContent = "Nenhum arquivo selecionado";
-    } else {
-      const errorMessage = await response.text();
-      alert(`Erro ao cadastrar: ${errorMessage}`);
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || "Erro ao cadastrar portaria");
     }
+
+    alert("Portaria cadastrada com sucesso!");
+    event.target.reset();
+    document.getElementById("file-name-portaria").textContent = "Nenhum arquivo selecionado";
+    document.getElementById('statusPortariaToggle').checked = true;
+    document.getElementById('statusPortariaValue').textContent = 'Vigente';
+    document.getElementById('statusPortariaHidden').value = 'Vigente';
+    voltarPaginaInicial();
+    
   } catch (error) {
-    console.error("Erro no cadastro:", error.message);
-    alert("Erro ao se conectar ao servidor. Verifique a conexão.");
+    console.error("Erro no cadastro:", error);
+    alert(`Erro ao cadastrar: ${error.message}`);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalText;
   }
 }
 
-
-
-// Funções de pesquisa
+// ========== FUNÇÕES DE PESQUISA ==========
 async function pesquisarResolucoes(event) {
   event.preventDefault();
 
   const numero = document.getElementById("numeroPesquisa").value.trim();
   const ano = document.getElementById("anoPesquisa").value.trim();
   const tipo = document.getElementById("tipoPesquisa").value.trim();
-  const status = document.getElementById("statusPesquisaHidden").value; // Usar o valor do hidden input
+  const status = document.getElementById("statusPesquisaHidden").value;
   const assunto = document.getElementById("assuntoPesquisa").value.trim();
 
   const queryParams = new URLSearchParams();
@@ -231,14 +262,11 @@ async function pesquisarResolucoes(event) {
 
   try {
     const response = await fetch(`${API_URL}/resolucoes?${queryParams.toString()}`);
+    const data = await response.json();
     
     if (!response.ok) {
-      const errorMessage = await response.text();
-      alert(`Erro na pesquisa: ${errorMessage}`);
-      return;
+      throw new Error(data.message || "Erro na pesquisa");
     }
-    
-    const data = await response.json();
     
     const resolucoes = data.data || data;
     
@@ -252,12 +280,9 @@ async function pesquisarResolucoes(event) {
     
   } catch (error) {
     console.error("Erro ao buscar resoluções:", error);
-    alert("Erro ao se conectar ao servidor. Verifique a conexão.");
+    alert(`Erro na pesquisa: ${error.message}`);
   }
 }
-
-
-
 
 async function pesquisarPortarias(event) {
   event.preventDefault();
@@ -275,14 +300,11 @@ async function pesquisarPortarias(event) {
 
   try {
     const response = await fetch(`${API_URL}/portarias?${queryParams.toString()}`);
+    const data = await response.json();
     
     if (!response.ok) {
-      const errorMessage = await response.text();
-      alert(`Erro na pesquisa: ${errorMessage}`);
-      return;
+      throw new Error(data.message || "Erro na pesquisa");
     }
-    
-    const data = await response.json();
     
     const portarias = data.data || data;
     
@@ -296,13 +318,11 @@ async function pesquisarPortarias(event) {
     
   } catch (error) {
     console.error("Erro ao buscar portarias:", error);
-    alert("Erro ao se conectar ao servidor. Verifique a conexão.");
+    alert(`Erro na pesquisa: ${error.message}`);
   }
 }
 
-
-
-// Exibir resultados
+// ========== EXIBIÇÃO DE RESULTADOS ==========
 function exibirResultadosResolucoes(resolucoes) {
   const tabelaResultados = document.getElementById("tabelaResultadosResolucao").querySelector("tbody");
   tabelaResultados.innerHTML = "";
@@ -352,9 +372,6 @@ function exibirResultadosResolucoes(resolucoes) {
   document.getElementById("resultadosPesquisaResolucao").style.display = "block";
 }
 
-
-
-
 function exibirResultadosPortarias(portarias) {
   const tabelaResultados = document.getElementById("tabelaResultadosPortaria").querySelector("tbody");
   tabelaResultados.innerHTML = "";
@@ -402,10 +419,7 @@ function exibirResultadosPortarias(portarias) {
   document.getElementById("resultadosPesquisaPortaria").style.display = "block";
 }
 
-
-
-
-// Visualizar PDF
+// ========== VISUALIZAR PDF ==========
 function visualizarPDF(pdfPath) {
   if (pdfPath) {
     const url = `${API_URL}/uploads/${pdfPath}`;
@@ -415,9 +429,7 @@ function visualizarPDF(pdfPath) {
   }
 }
 
-
-
-// Funções de exclusão
+// ========== FUNÇÕES DE EXCLUSÃO ==========
 async function excluirResolucao(id) {
   if (!isAdminLoggedIn) {
     alert("Apenas administradores podem excluir resoluções.");
@@ -431,22 +443,21 @@ async function excluirResolucao(id) {
         headers: getAuthHeaders()
       });
 
-      if (response.ok) {
-        alert("Resolução excluída com sucesso!");
-        document.getElementById("formPesquisaResolucao").dispatchEvent(new Event("submit"));
-      } else {
-        const errorMessage = await response.text();
-        alert(`Erro ao excluir: ${errorMessage}`);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || "Erro ao excluir resolução");
       }
+
+      alert("Resolução excluída com sucesso!");
+      document.getElementById("formPesquisaResolucao").dispatchEvent(new Event("submit"));
+      
     } catch (error) {
       console.error("Erro ao excluir:", error);
-      alert("Erro ao se conectar ao servidor.");
+      alert(`Erro ao excluir: ${error.message}`);
     }
   }
 }
-
-
-
 
 async function excluirPortaria(id) {
   if (!isAdminLoggedIn) {
@@ -461,129 +472,131 @@ async function excluirPortaria(id) {
         headers: getAuthHeaders()
       });
 
-      if (response.ok) {
-        alert("Portaria excluída com sucesso!");
-        document.getElementById("formPesquisaPortaria").dispatchEvent(new Event("submit"));
-      } else {
-        const errorMessage = await response.text();
-        alert(`Erro ao excluir: ${errorMessage}`);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || "Erro ao excluir portaria");
       }
+
+      alert("Portaria excluída com sucesso!");
+      document.getElementById("formPesquisaPortaria").dispatchEvent(new Event("submit"));
+      
     } catch (error) {
       console.error("Erro ao excluir:", error);
-      alert("Erro ao se conectar ao servidor.");
+      alert(`Erro ao excluir: ${error.message}`);
     }
   }
 }
 
-
-
-// Funções auxiliares
-function toggleVinculo() {
-  const vinculoSelect = document.getElementById("vinculo");
-  const campoVinculo = document.getElementById("campoVinculo");
-
-  if (vinculoSelect.value === "Sim") {
-    campoVinculo.style.display = "block";
-  } else {
-    campoVinculo.style.display = "none";
-  }
-}
-
-// Controle dos toggles nas pesquisas
-document.getElementById('statusPesquisaToggle').addEventListener('change', function() {
-  const value = this.checked ? 'Vigente' : 'Revogada';
-  document.getElementById('statusPesquisaValue').textContent = value;
-  document.getElementById('statusPesquisaHidden').value = value;
-});
-
-document.getElementById('statusPortariaPesquisaToggle').addEventListener('change', function() {
-  const value = this.checked ? 'Vigente' : 'Revogada';
-  document.getElementById('statusPortariaPesquisaValue').textContent = value;
-  document.getElementById('statusPortariaPesquisaHidden').value = value;
-});
-
-
-
+// ========== FUNÇÕES AUXILIARES ==========
 function limparFormulario() {
   if (confirm("Tem certeza que deseja limpar todos os campos?")) {
-      document.getElementById("formCadastro").reset();
-      document.getElementById('statusToggle').checked = true;
-      document.getElementById('statusValue').textContent = 'Vigente';
-      document.getElementById('statusHidden').value = 'Vigente';
-      
-      document.getElementById('vinculoToggle').checked = true;
-      document.getElementById('vinculoValue').textContent = 'Sim';
-      document.getElementById('vinculoHidden').value = 'Sim';
-      document.getElementById('campoVinculo').style.display = 'block';
-      
-      document.getElementById("file-name").textContent = "Nenhum arquivo selecionado";
+    document.getElementById("formCadastro").reset();
+    document.getElementById('statusToggle').checked = true;
+    document.getElementById('statusValue').textContent = 'Vigente';
+    document.getElementById('statusHidden').value = 'Vigente';
+    
+    document.getElementById('vinculoToggle').checked = false;
+    document.getElementById('vinculoValue').textContent = 'Não';
+    document.getElementById('vinculoHidden').value = 'Não';
+    document.getElementById('campoVinculo').style.display = 'none';
+    
+    document.getElementById("file-name").textContent = "Nenhum arquivo selecionado";
   }
 }
 
 function limparFormularioPortaria() {
   if (confirm("Tem certeza que deseja limpar todos os campos?")) {
-      document.getElementById("formCadastroPortaria").reset();
-      document.getElementById('statusPortariaToggle').checked = true;
-      document.getElementById('statusPortariaValue').textContent = 'Vigente';
-      document.getElementById('statusPortariaHidden').value = 'Vigente';
-      
-      document.getElementById("file-name-portaria").textContent = "Nenhum arquivo selecionado";
+    document.getElementById("formCadastroPortaria").reset();
+    document.getElementById('statusPortariaToggle').checked = true;
+    document.getElementById('statusPortariaValue').textContent = 'Vigente';
+    document.getElementById('statusPortariaHidden').value = 'Vigente';
+    
+    document.getElementById("file-name-portaria").textContent = "Nenhum arquivo selecionado";
   }
 }
 
+// ========== CONFIGURAÇÃO DE TOGGLES E EVENT LISTENERS ==========
+document.addEventListener('DOMContentLoaded', function() {
+  // Configura os listeners para os toggles
+  const statusToggle = document.getElementById('statusToggle');
+  if (statusToggle) {
+    statusToggle.addEventListener('change', function() {
+      const value = this.checked ? 'Vigente' : 'Revogada';
+      document.getElementById('statusValue').textContent = value;
+      document.getElementById('statusHidden').value = value;
+    });
+  }
 
+  const vinculoToggle = document.getElementById('vinculoToggle');
+  if (vinculoToggle) {
+    vinculoToggle.addEventListener('change', function() {
+      const value = this.checked ? 'Sim' : 'Não';
+      document.getElementById('vinculoValue').textContent = value;
+      document.getElementById('vinculoHidden').value = value;
+      document.getElementById('campoVinculo').style.display = this.checked ? 'block' : 'none';
+    });
+  }
 
-// Event Listeners
-document.getElementById("pdf").addEventListener("change", function () {
-  const fileName = this.files[0] ? this.files[0].name : "Nenhum arquivo selecionado";
-  document.getElementById("file-name").textContent = fileName;
-});
+  // Toggle de Status (Portaria)
+  const statusPortariaToggle = document.getElementById('statusPortariaToggle');
+  if (statusPortariaToggle) {
+    statusPortariaToggle.addEventListener('change', function() {
+      const value = this.checked ? 'Vigente' : 'Revogada';
+      document.getElementById('statusPortariaValue').textContent = value;
+      document.getElementById('statusPortariaHidden').value = value;
+    });
+  }
 
-document.getElementById("pdfPortaria").addEventListener("change", function () {
-  const fileName = this.files[0] ? this.files[0].name : "Nenhum arquivo selecionado";
-  document.getElementById("file-name-portaria").textContent = fileName;
-});
+  // Event Listeners para arquivos
+  const pdfInput = document.getElementById('pdf');
+  if (pdfInput) {
+    pdfInput.addEventListener('change', function() {
+      const fileName = this.files[0] ? this.files[0].name : 'Nenhum arquivo selecionado';
+      document.getElementById('file-name').textContent = fileName;
+    });
+  }
 
+  const pdfPortariaInput = document.getElementById("pdfPortaria");
+  if (pdfPortariaInput) {
+    pdfPortariaInput.addEventListener("change", function() {
+      const fileName = this.files[0] ? this.files[0].name : "Nenhum arquivo selecionado";
+      document.getElementById("file-name-portaria").textContent = fileName;
+    });
+  }
 
-
-// Inicialização
-document.addEventListener('DOMContentLoaded', function () {
-  const token = localStorage.getItem('adminToken');
-  if (token) {
+  // Verificar se o usuário está logado ao carregar a página
+  const adminToken = localStorage.getItem('adminToken');
+  if (adminToken) {
     isAdminLoggedIn = true;
     document.getElementById('adminButtons').style.display = 'block';
-    document.getElementById('btnLogin').innerHTML = '<i class="fa-solid fa-user"></i> Logout';
+    document.getElementById('btnLogin').innerHTML = '<i class="fas fa-user"></i> Logout';
     document.getElementById('btnLogin').onclick = logout;
   }
 
-  // Configurar eventos para os formulários
-  document.getElementById("formCadastro")?.addEventListener("submit", submitForm);
-  document.getElementById("formCadastroPortaria")?.addEventListener("submit", submitFormPortaria);
-  document.getElementById("formPesquisaResolucao")?.addEventListener("submit", pesquisarResolucoes);
-  document.getElementById("formPesquisaPortaria")?.addEventListener("submit", pesquisarPortarias);
-
-  // Configurar botão de login
-  document.getElementById("btnLogin").onclick = mostrarLogin;
-
-  // Configurar modal de login
-  document.getElementById("formLogin").addEventListener("submit", fazerLogin);
-  document.querySelector(".close").onclick = fecharModal;
-
-  // Fechar modal ao clicar fora
-  window.onclick = function (event) {
-    const modal = document.getElementById('modalLogin');
-    if (event.target === modal) {
-      fecharModal(); 
-    }
-  };
-
+  // Configurar ordenação de tabelas
   setupSorting();
+
+  // Testar conexão com o servidor
+  async function testarConexao() {
+    try {
+      const response = await fetch(API_URL);
+      console.log("Servidor respondendo:", response.status);
+      return response.ok;
+    } catch (error) {
+      console.error("Servidor não está respondendo:", error);
+      return false;
+    }
+  }
+
+  testarConexao().then(conectado => {
+    if (!conectado) {
+      alert("Não foi possível conectar ao servidor. Verifique se o servidor está rodando.");
+    }
+  });
 });
 
-
-
-
-// Funções de ordenação
+// ========== FUNÇÕES DE ORDENAÇÃO ==========
 function setupSorting() {
   // Ordenação para Resoluções
   document.getElementById('ordenarNumeroRes')?.addEventListener('click', () => sortTable('tabelaResultadosResolucao', 0));
@@ -597,8 +610,6 @@ function setupSorting() {
   document.getElementById('ordenarDataPort')?.addEventListener('click', () => sortTable('tabelaResultadosPortaria', 3));
 }
 
-
-
 function sortTable(tableId, columnIndex) {
   const table = document.getElementById(tableId);
   const tbody = table.querySelector('tbody');
@@ -607,100 +618,37 @@ function sortTable(tableId, columnIndex) {
   const isAsc = header.classList.contains('asc');
   
   table.querySelectorAll('thead th').forEach(th => {
-      th.classList.remove('asc', 'desc');
+    th.classList.remove('asc', 'desc');
   });
   
   header.classList.add(isAsc ? 'desc' : 'asc');
   rows.sort((a, b) => {
-      const aText = a.cells[columnIndex].textContent.trim();
-      const bText = b.cells[columnIndex].textContent.trim();
-      if (!isNaN(aText) && !isNaN(bText)) {
-          return (parseFloat(aText) - parseFloat(bText)) * (isAsc ? -1 : 1);
+    const aText = a.cells[columnIndex].textContent.trim();
+    const bText = b.cells[columnIndex].textContent.trim();
+    
+    if (!isNaN(aText) && !isNaN(bText)) {
+      return (parseFloat(aText) - parseFloat(bText)) * (isAsc ? -1 : 1);
+    }
+    
+    if (columnIndex === 4 || columnIndex === 3) { 
+      const dateA = parseDate(aText);
+      const dateB = parseDate(bText);
+      if (dateA && dateB) {
+        return (dateA - dateB) * (isAsc ? -1 : 1);
       }
-      if (columnIndex === 4 || columnIndex === 3) { 
-          const dateA = parseDate(aText);
-          const dateB = parseDate(bText);
-          if (dateA && dateB) {
-              return (dateA - dateB) * (isAsc ? -1 : 1);
-          }
-      }
-      return aText.localeCompare(bText) * (isAsc ? -1 : 1);
+    }
+    
+    return aText.localeCompare(bText) * (isAsc ? -1 : 1);
   });
+  
   rows.forEach(row => tbody.appendChild(row));
 }
-
-
-
 
 function parseDate(dateString) {
   if (dateString === 'N/A') return null;
   const parts = dateString.split('/');
   if (parts.length === 3) {
-      return new Date(parts[2], parts[1] - 1, parts[0]);
+    return new Date(parts[2], parts[1] - 1, parts[0]);
   }
   return null;
-}
-
-
-// Configuração dos toggles
-document.addEventListener('DOMContentLoaded', function() {
-  // Toggle de Status (Resolução)
-  const statusToggle = document.getElementById('statusToggle');
-  const statusValue = document.getElementById('statusValue');
-  const statusHidden = document.getElementById('statusHidden');
-  
-  statusToggle.addEventListener('change', function() {
-      if (this.checked) {
-          statusValue.textContent = 'Vigente';
-          statusHidden.value = 'Vigente';
-      } else {
-          statusValue.textContent = 'Revogada';
-          statusHidden.value = 'Revogada';
-      }
-  });
-
-  // Toggle de Vínculo
-  const vinculoToggle = document.getElementById('vinculoToggle');
-  const vinculoValue = document.getElementById('vinculoValue');
-  const vinculoHidden = document.getElementById('vinculoHidden');
-  const campoVinculo = document.getElementById('campoVinculo');
-  
-  vinculoToggle.addEventListener('change', function() {
-      if (this.checked) {
-          vinculoValue.textContent = 'Sim';
-          vinculoHidden.value = 'Sim';
-          campoVinculo.style.display = 'block';
-      } else {
-          vinculoValue.textContent = 'Não';
-          vinculoHidden.value = 'Não';
-          campoVinculo.style.display = 'none';
-      }
-  });
-
-  // Toggle de Status (Portaria)
-  const statusPortariaToggle = document.getElementById('statusPortariaToggle');
-  const statusPortariaValue = document.getElementById('statusPortariaValue');
-  const statusPortariaHidden = document.getElementById('statusPortariaHidden');
-  
-  statusPortariaToggle.addEventListener('change', function() {
-      if (this.checked) {
-          statusPortariaValue.textContent = 'Vigente';
-          statusPortariaHidden.value = 'Vigente';
-      } else {
-          statusPortariaValue.textContent = 'Revogada';
-          statusPortariaHidden.value = 'Revogada';
-      }
-  });
-});
-
-// Atualize a função toggleVinculo para trabalhar com o novo toggle
-function toggleVinculo() {
-  const vinculoToggle = document.getElementById('vinculoToggle');
-  const campoVinculo = document.getElementById('campoVinculo');
-  
-  if (vinculoToggle.checked) {
-      campoVinculo.style.display = 'block';
-  } else {
-      campoVinculo.style.display = 'none';
-  }
 }
