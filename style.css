@@ -1,6 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
-/* Estilos gerais */
 body {
      font-family: 'Inter', sans-serif;
     margin: 0;
@@ -1269,7 +1268,7 @@ input:checked + .toggle-slider:before {
   }
 }
 
-/* TABELAS DE RESULTADO */
+
 @media (max-width: 768px) {
   table,
   .resultados-container table {
@@ -1285,7 +1284,6 @@ input:checked + .toggle-slider:before {
   }
 }
 
-/* GERAL PARA TELAS MENORES */
 @media (max-width: 480px) {
   .titulo-inicial {
     font-size: 1.8rem;
