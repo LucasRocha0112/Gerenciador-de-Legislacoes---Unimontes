@@ -652,3 +652,4 @@ function parseDate(dateString) {
   }
   return null;
 }
+
