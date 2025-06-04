@@ -1,5 +1,5 @@
 const express = require("express");
-const mysql = require("mysql2/promise"); // Usando a versão com promises
+const mysql = require("mysql2/promise"); 
 const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
@@ -9,22 +9,20 @@ const fs = require("fs");
 const app = express();
 const PORT = 3000;
 
-// Configurações
 const uploadDir = path.join(__dirname, "uploads");
 
-// Configuração CORS para desenvolvimento
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Admin-Token']
 }));
 
-// Middleware
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(uploadDir));
 
-// Verificar ou criar a pasta 'uploads'
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -39,7 +37,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ 
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 } // Limite de 5MB
+  limits: { fileSize: 5 * 1024 * 1024 } 
 });
 
 // Configurar pool de conexões com o banco de dados
@@ -56,8 +54,6 @@ const pool = mysql.createPool({
 // Middleware de verificação de admin
 async function verificarAdmin(req, res, next) {
   const authToken = req.headers['admin-token'] || req.headers['Admin-Token'];
-  
-  // Em desenvolvimento, aceita qualquer token ou o padrão 'admin123'
   if (process.env.NODE_ENV === 'development' || authToken === 'admin123') {
     return next();
   }
@@ -98,15 +94,27 @@ app.post('/login', (req, res) => {
 // Rotas de cadastro protegidas
 app.post("/cadastrar-resolucao", verificarAdmin, upload.single("pdf"), async (req, res) => {
   try {
-    // Extrai os dados do corpo da requisição (FormData)
     const { numero, tipo, ano, assunto, data, status, vinculo, vinculo_resolucao } = req.body;
-
-    // Validação dos campos obrigatórios
     if (!numero || !tipo || !ano || !assunto || !data || !status || !vinculo) {
       return res.status(400).json({ 
         success: false, 
         message: "Todos os campos obrigatórios devem ser preenchidos." 
       });
+    }
+    if (isNaN(numero) || parseInt(numero) <= 0) {
+      return res.status(400).json({ success: false, message: "Número da Resolução deve ser um número válido." });
+    }
+    if (!['CEPEX', 'CONSU'].includes(tipo)) {
+      return res.status(400).json({ success: false, message: "Tipo de Resolução inválido. Use 'CEPEX' ou 'CONSU'." });
+    }
+    if (isNaN(ano) || parseInt(ano) < 1900 || parseInt(ano) > new Date().getFullYear() + 5) { // Ex: até 5 anos no futuro
+      return res.status(400).json({ success: false, message: "Ano inválido." });
+    }
+    if (new Date(data).toString() === 'Invalid Date') {
+      return res.status(400).json({ success: false, message: "Data inválida." });
+    }
+    if (vinculo === "Sim" && !vinculo_resolucao) {
+      return res.status(400).json({ success: false, message: "Resolução vinculada é obrigatória se 'Possui Vínculo?' for 'Sim'." });
     }
 
     const query = `
@@ -136,6 +144,9 @@ app.post("/cadastrar-resolucao", verificarAdmin, upload.single("pdf"), async (re
     });
   } catch (error) {
     console.error("Erro no cadastro de resolução:", error);
+    if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, message: "O arquivo PDF excede o tamanho máximo permitido (5MB)." });
+    }
     res.status(500).json({
       success: false,
       message: "Erro interno no servidor",
@@ -153,6 +164,17 @@ app.post("/cadastrar-portaria", verificarAdmin, upload.single("pdfPortaria"), as
         success: false, 
         message: "Todos os campos obrigatórios devem ser preenchidos." 
       });
+    }
+
+    // Validações adicionais
+    if (isNaN(numeroPortaria) || parseInt(numeroPortaria) <= 0) {
+      return res.status(400).json({ success: false, message: "Número da Portaria deve ser um número válido." });
+    }
+    if (isNaN(anoPortaria) || parseInt(anoPortaria) < 1900 || parseInt(anoPortaria) > new Date().getFullYear() + 5) {
+      return res.status(400).json({ success: false, message: "Ano inválido." });
+    }
+    if (new Date(dataPortaria).toString() === 'Invalid Date') {
+      return res.status(400).json({ success: false, message: "Data inválida." });
     }
 
     const query = `
@@ -177,6 +199,9 @@ app.post("/cadastrar-portaria", verificarAdmin, upload.single("pdfPortaria"), as
     });
   } catch (error) {
     console.error("Erro no cadastro de portaria:", error);
+    if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, message: "O arquivo PDF excede o tamanho máximo permitido (5MB)." });
+    }
     res.status(500).json({
       success: false,
       message: "Erro interno no servidor",
@@ -185,26 +210,64 @@ app.post("/cadastrar-portaria", verificarAdmin, upload.single("pdfPortaria"), as
   }
 });
 
-// Rotas de consulta públicas
+// Rotas de consulta
 app.get("/resolucoes", async (req, res) => {
   try {
-    const { numero, ano, tipo, status, assunto } = req.query;
-
-    let query = `
-      SELECT id, numero, tipo, ano, assunto, data, status, vinculo, vinculo_resolucao, pdf
-      FROM resolucoes WHERE 1=1
-    `;
-    const params = [];
-
-    if (numero) query += " AND numero LIKE ?", params.push(`%${numero}%`);
-    if (ano) query += " AND ano = ?", params.push(ano);
-    if (tipo) query += " AND tipo = ?", params.push(tipo);
-    if (status) query += " AND status = ?", params.push(status);
-    if (assunto) query += " AND assunto LIKE ?", params.push(`%${assunto}%`);
-
-    const [results] = await pool.execute(query, params);
+    const { numero, ano, tipo, status, assunto, page = 1, limit = 25 } = req.query;
+    const parsedPage = parseInt(page);
+    const parsedLimit = parseInt(limit);
     
-    res.json({ success: true, data: results });
+    if (isNaN(parsedPage) || parsedPage < 1 || isNaN(parsedLimit) || parsedLimit < 1) {
+      return res.status(400).json({ success: false, message: "Parâmetros de paginação inválidos." });
+    }
+    
+    const offset = (parsedPage - 1) * parsedLimit;
+    
+    let baseWhereClause = `WHERE 1=1`; 
+    const filterParams = []; 
+
+    if (numero) {
+      baseWhereClause += " AND numero LIKE ?";
+      filterParams.push(`%${numero}%`);
+    }
+    if (ano) {
+      baseWhereClause += " AND ano = ?";
+      filterParams.push(ano);
+    }
+    if (tipo) {
+      baseWhereClause += " AND tipo = ?";
+      filterParams.push(tipo);
+    }
+    if (status) {
+      baseWhereClause += " AND status = ?";
+      filterParams.push(status);
+    }
+    if (assunto) {
+      baseWhereClause += " AND assunto LIKE ?";
+      filterParams.push(`%${assunto}%`);
+    }
+
+     const [countResults] = await pool.execute(`SELECT COUNT(*) as total FROM resolucoes ${baseWhereClause}`, filterParams);
+    const totalItems = countResults[0].total;
+    const totalPages = Math.ceil(totalItems / parsedLimit);
+    
+    const [results] = await pool.execute(
+      `SELECT id, numero, tipo, ano, assunto, data, status, vinculo, vinculo_resolucao, pdf 
+       FROM resolucoes ${baseWhereClause} 
+       LIMIT ? OFFSET ?`, 
+      [...filterParams, parsedLimit, offset]
+    );
+    
+    res.json({
+      success: true,
+      data: results,
+      pagination: {
+        totalItems,
+        totalPages,
+        currentPage: parsedPage,
+        itemsPerPage: parsedLimit
+      }
+    });
   } catch (error) {
     console.error("Erro ao pesquisar resoluções:", error);
     res.status(500).json({
@@ -214,24 +277,58 @@ app.get("/resolucoes", async (req, res) => {
   }
 });
 
+// Rota para portarias 
 app.get("/portarias", async (req, res) => {
   try {
-    const { numero, ano, status, assunto } = req.query;
+    const { numero, ano, status, assunto, page = 1, limit = 25 } = req.query; 
 
-    let query = `
-      SELECT id, numero, ano, assunto, data, status, pdf
-      FROM portarias WHERE 1=1
-    `;
-    const params = [];
+    const parsedPage = parseInt(page);
+    const parsedLimit = parseInt(limit);
 
-    if (numero) query += " AND numero LIKE ?", params.push(`%${numero}%`);
-    if (ano) query += " AND ano = ?", params.push(ano);
-    if (status) query += " AND status = ?", params.push(status);
-    if (assunto) query += " AND assunto LIKE ?", params.push(`%${assunto}%`);
+    if (isNaN(parsedPage) || parsedPage < 1 || isNaN(parsedLimit) || parsedLimit < 1) {
+      return res.status(400).json({ success: false, message: "Parâmetros de paginação inválidos." });
+    }
 
-    const [results] = await pool.execute(query, params);
+    const offset = (parsedPage - 1) * parsedLimit;
+
+    let baseWhereClause = `WHERE 1=1`; 
+    const filterParams = []; 
+
+    if (numero) {
+      baseWhereClause += " AND numero LIKE ?";
+      filterParams.push(`%${numero}%`);
+    }
+    if (ano) {
+      baseWhereClause += " AND ano = ?";
+      filterParams.push(ano);
+    }
+    if (status) {
+      baseWhereClause += " AND status = ?";
+      filterParams.push(status);
+    }
+    if (assunto) {
+      baseWhereClause += " AND assunto LIKE ?";
+      filterParams.push(`%${assunto}%`);
+    }
+
+
+    const [countResults] = await pool.execute(`SELECT COUNT(*) as total FROM portarias ${baseWhereClause}`, filterParams);
+    const totalItems = countResults[0].total;
+    const totalPages = Math.ceil(totalItems / parsedLimit);
+
+
+    const [results] = await pool.execute(`SELECT id, numero, ano, assunto, data, status, pdf FROM portarias ${baseWhereClause} LIMIT ? OFFSET ?`, [...filterParams, parsedLimit, offset]);
     
-    res.json({ success: true, data: results });
+    res.json({
+      success: true,
+      data: results,
+      pagination: {
+        totalItems,
+        totalPages,
+        currentPage: parsedPage,
+        itemsPerPage: parsedLimit
+      }
+    });
   } catch (error) {
     console.error("Erro ao pesquisar portarias:", error);
     res.status(500).json({
@@ -332,4 +429,3 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
-
